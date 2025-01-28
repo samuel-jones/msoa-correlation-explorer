@@ -1,12 +1,17 @@
+
+install.packages("remotes")
+remotes::install_github("rOpenSci/fingertipsR",
+                        build_vignettes = TRUE,
+                        dependencies = "suggests")
+
+
 library(tidyverse)
 library(fingertipsR)
-library(PHEindicatormethods)
 library(shiny)
 library(plotly)
 library(sf)
 library(leaflet)
 library(leaflet.extras)
-library(leaflet.extras2)
 library(htmltools)
 library(thematic)
 library(shinythemes)
@@ -16,31 +21,27 @@ library(bslib)
 
 # Get data from fingertips etc: -----------------------------------------------
 
-# Find the local health profile ID
-profs <- profiles()
-# it is 143
-
-# Find the area type id
-area_types()  
-# msoa is AreaTypeID = 3
+# # Find the local health profile ID
+# profs <- profiles()
+# # it is 143
+# 
+# # Find the area type id
+# area_types()  
+# # msoa is AreaTypeID = 3
 
 #Get list of indicators in the profile id 143
 inds <- indicators(ProfileID = 143)
 
 
 #retrieve data for selected indicator and area type
-msoa_ft <- fingertips_data(inds$IndicatorID, AreaTypeID = 3) %>%
-  janitor::clean_names() 
-
-
-
-msoa_ft_ssot <- msoa_ft %>% 
+msoa_ft_ssot <- fingertips_data(inds$IndicatorID, AreaTypeID = 3) %>%
+  janitor::clean_names() %>% 
   filter(parent_name %in% c("Staffordshire", "Stoke-on-Trent")) %>% 
   mutate (indicator_name = str_replace_all(indicator_name, "chronic obstructive pulmonary disease", "")) %>% 
   mutate (indicator_name = str_replace(indicator_name,"\\(COPD\\)", "COPD")) %>% 
   mutate (indicator_name = str_squish(indicator_name))
 
-unique(msoa_ft_ssot$indicator_name)
+#unique(msoa_ft_ssot$indicator_name)
 
 #Get a list of the main indicators (rates etc) that we want based on ID:
 rate_inds <- msoa_ft_ssot %>%   
@@ -147,57 +148,51 @@ ui <- fluidPage(
   # ),
   # 
   titlePanel("SSoT Inequalities Explorer"),
-  tabsetPanel(
-    id = "tabs",
-    
-
-    #MSOA correlation section with inputs, text, maps and charts:   
-    tabPanel(
-      title = "MSOA and Correlation Analysis",
-      fluidPage(
-        sidebarLayout(
-          sidebarPanel(
-            width = 3,  # Adjust this number to make it narrower (default is 4)
-            selectInput("group_filter", "Group Filter", 
-                        choices = c("All", unique(lookup_df$group))),
-            selectInput("x_indicator", "X-Axis Indicator", choices = NULL),
-            selectInput("y_indicator", "Y-Axis Indicator", choices = lookup_df$name[lookup_df$cat == "y"]),
-            selectInput("region_filter", "Filter by Region", choices = c("All", unique(my_shp$lad19n))),
-            
-            # Add text and code here
-            tags$p("Select indicators for the X and Y axes from the dropdown menus above. You can also filter the data by region."),
-            tags$p("Hover over points on the map to see more details, and the corresponding point on the scatter plot will be highlighted."),
-            tags$p("Use the scatter plot to analyze the relationship between the selected indicators."),
-            tags$br(), 
-            tags$br(),  # Line break
-            uiOutput("top_correlations"),
-            tags$p(""),
-            tags$br(),  # Line break
-            tags$p("It should be noted that whilst the correlations highlighted here can provide valuable insights into potential relationships between variables, it is crucial to remember that correlation does not imply causation. Several factors can contribute to a strong correlation, and interpreting these results without considering these factors can be misleading."),
-            tags$p("Additional sections use statistical tests and specialised techniques to interrogate the data more thoroughly. These methods aim to provide more robust insights and help to identify potential causal relationships."),
-          ),
+  
+  #MSOA correlation section with inputs, text, maps and charts:   
+  tabPanel(
+    title = "MSOA and Correlation Analysis",
+    fluidPage(
+      sidebarLayout(
+        sidebarPanel(
+          width = 3,  # Adjust this number to make it narrower (default is 4)
+          selectInput("group_filter", "Group Filter", 
+                      choices = c("All", unique(lookup_df$group))),
+          selectInput("x_indicator", "X-Axis Indicator", choices = NULL),
+          selectInput("y_indicator", "Y-Axis Indicator", choices = lookup_df$name[lookup_df$cat == "y"]),
+          selectInput("region_filter", "Filter by Region", choices = c("All", unique(my_shp$lad19n))),
           
-          mainPanel(
-            fluidRow(
-              column(6, 
-                     tags$div(id = "map1_title"),
-                     leafletOutput("map1", height = "500px")),
-              column(6, 
-                     tags$div(id = "map2_title"),
-                     leafletOutput("map2", height = "500px"))
-            ),
-            plotlyOutput("scatterplot", height = "345px"),
-            uiOutput("correlation_text")
-            #uiOutput("top_correlations")  
-          )
+          # Add text and code here
+          tags$p("Select indicators for the X and Y axes from the dropdown menus above. You can also filter the data by region."),
+          tags$p("Hover over points on the map to see more details, and the corresponding point on the scatter plot will be highlighted."),
+          tags$p("Use the scatter plot to analyze the relationship between the selected indicators."),
+          tags$br(), 
+          tags$br(),  # Line break
+          uiOutput("top_correlations"),
+          tags$p(""),
+          tags$br(),  # Line break
+          tags$p("It should be noted that whilst the correlations highlighted here can provide valuable insights into potential relationships between variables, it is crucial to remember that correlation does not imply causation. Several factors can contribute to a strong correlation, and interpreting these results without considering these factors can be misleading."),
+          tags$p("Additional sections use statistical tests and specialised techniques to interrogate the data more thoroughly. These methods aim to provide more robust insights and help to identify potential causal relationships."),
+        ),
+        
+        mainPanel(
+          # fluidRow(
+          #   column(6, 
+          #          tags$div(id = "map1_title"),
+          #          leafletOutput("map1", height = "500px")),
+          #   column(6, 
+          #          tags$div(id = "map2_title"),
+          #          leafletOutput("map2", height = "500px"))
+          # ),
+          plotlyOutput("scatterplot", height = "345px"),
+          uiOutput("correlation_text")
+          #uiOutput("top_correlations")  
         )
       )
-    ),
-    
-    
-
-  
+    )
+  )
 )
+
 
 
 
@@ -248,178 +243,185 @@ server <- function(input, output, session) {
   
   
   
+  # Map1 --------------------------------------------------------------------
+  
+  
   # Create the first leaflet map based on x_indicator input with some dynamic text
   
-  output$map1 <- renderLeaflet({
-    data <- filtered_data() # Get the filtered data
-    
-    x_col <- name_to_id(input$x_indicator) # Get the column name for x_indicator
-    
-    shp <- data %>% 
-      arrange(area_name) %>% 
-      mutate(pointNumber = row_number()) 
-    
-    # Ensure x_col is a column name for classIntervals
-    x_col_sym <- sym(x_col)
-    
-    # Calculate class intervals based on natural breaks jenks method from classInt package
-    classes <- classInt::classIntervals(data[[x_col]], n = 4, style = "jenks")
-    leg_values <- unlist(classes$brks)
-    
-    # Mutate to add fillColor column
-    to_map <- shp %>% 
-      mutate(fillColor = case_when(
-        !!x_col_sym >= leg_values[1] & !!x_col_sym < leg_values[2] ~ "#a6bddb",
-        !!x_col_sym >= leg_values[2] & !!x_col_sym < leg_values[3] ~ "#74a9cf",
-        !!x_col_sym >= leg_values[3] & !!x_col_sym < leg_values[4] ~ "#2b8cbe",
-        !!x_col_sym >= leg_values[4] ~ "#045a8d",
-        TRUE ~ "#DCDCDC"
-      )) %>% 
-      mutate(desc = paste0(area_name,"-", round(.data[[x_col]], 1)))
-    
-    leaflet(to_map) %>%
-      addProviderTiles(providers$CartoDB.Positron) %>% 
-      setView(-2.2, 52.8, 9) %>%
-      addPolygons(
-        layerId = ~pointNumber,  # Set the layerId to the area_code
-        fillColor = ~fillColor,
-        fillOpacity = 0.8,
-        color = "white",
-        weight = 1,
-        label = ~desc,
-        labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px")),
-        highlightOptions = highlightOptions(
-          weight = 4,
-          color = "yellow",
-          #fillOpacity = 0.7,
-          bringToFront = TRUE
-        )
-      ) %>%
-      addLegend(
-        colors = c("#a6bddb", "#74a9cf", "#2b8cbe", "#045a8d"),
-        labels = c(
-          paste0(round(leg_values[1], 0), " to ", round(leg_values[2], 1)),
-          paste0(round(leg_values[2], 0), " to ", round(leg_values[3], 0)),
-          paste0(round(leg_values[3], 0), " to ", round(leg_values[4], 0)),
-          paste0(round(leg_values[4], 0), " to ", round(leg_values[5], 0))
-        ),
-        #title = input$x_indicator,
-        position = "bottomleft"
-      ) %>%
-      addEasyButton(easyButton(
-        icon = "fa-globe", title = "Reset Zoom",
-        onClick = JS("function(btn, map){ map.setZoom(9); map.setCenter([-2.2, 52.8]); }")
-      )) %>% 
-      addFullscreenControl()
-  })
+  # output$map1 <- renderLeaflet({
+  #   data <- filtered_data() # Get the filtered data
+  #   
+  #   x_col <- name_to_id(input$x_indicator) # Get the column name for x_indicator
+  #   
+  #   shp <- data %>% 
+  #     arrange(area_name) %>% 
+  #     mutate(pointNumber = row_number()) 
+  #   
+  #   # Ensure x_col is a column name for classIntervals
+  #   x_col_sym <- sym(x_col)
+  #   
+  #   # Calculate class intervals based on natural breaks jenks method from classInt package
+  #   classes <- classInt::classIntervals(data[[x_col]], n = 4, style = "jenks")
+  #   leg_values <- unlist(classes$brks)
+  #   
+  #   # Mutate to add fillColor column
+  #   to_map <- shp %>% 
+  #     mutate(fillColor = case_when(
+  #       !!x_col_sym >= leg_values[1] & !!x_col_sym < leg_values[2] ~ "#a6bddb",
+  #       !!x_col_sym >= leg_values[2] & !!x_col_sym < leg_values[3] ~ "#74a9cf",
+  #       !!x_col_sym >= leg_values[3] & !!x_col_sym < leg_values[4] ~ "#2b8cbe",
+  #       !!x_col_sym >= leg_values[4] ~ "#045a8d",
+  #       TRUE ~ "#DCDCDC"
+  #     )) %>% 
+  #     mutate(desc = paste0(area_name,"-", round(.data[[x_col]], 1)))
+  #   
+  #   leaflet(to_map) %>%
+  #     addProviderTiles(providers$CartoDB.Positron) %>% 
+  #     setView(-2.2, 52.8, 9) %>%
+  #     addPolygons(
+  #       layerId = ~pointNumber,  # Set the layerId to the area_code
+  #       fillColor = ~fillColor,
+  #       fillOpacity = 0.8,
+  #       color = "white",
+  #       weight = 1,
+  #       label = ~desc,
+  #       labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px")),
+  #       highlightOptions = highlightOptions(
+  #         weight = 4,
+  #         color = "yellow",
+  #         #fillOpacity = 0.7,
+  #         bringToFront = TRUE
+  #       )
+  #     ) %>%
+  #     addLegend(
+  #       colors = c("#a6bddb", "#74a9cf", "#2b8cbe", "#045a8d"),
+  #       labels = c(
+  #         paste0(round(leg_values[1], 0), " to ", round(leg_values[2], 1)),
+  #         paste0(round(leg_values[2], 0), " to ", round(leg_values[3], 0)),
+  #         paste0(round(leg_values[3], 0), " to ", round(leg_values[4], 0)),
+  #         paste0(round(leg_values[4], 0), " to ", round(leg_values[5], 0))
+  #       ),
+  #       #title = input$x_indicator,
+  #       position = "bottomleft"
+  #     ) %>%
+  #     addEasyButton(easyButton(
+  #       icon = "fa-globe", title = "Reset Zoom",
+  #       onClick = JS("function(btn, map){ map.setZoom(9); map.setCenter([-2.2, 52.8]); }")
+  #     )) %>% 
+  #     addFullscreenControl()
+  # })
+  # 
+  # 
+  # 
   
   
   
   
   
   
-  
+  # Map2 --------------------------------------------------------------------
   
   
   # Create the second map based on y_indicator input:
-  output$map2 <- renderLeaflet({
-    data <- filtered_data()
-    y_col <- name_to_id(input$y_indicator)
-    
-    shp <- data %>% 
-      arrange(area_name) %>% 
-      mutate(pointNumber = row_number()) 
-    
-    classes <- classInt::classIntervals(data[[y_col]], n = 4, style = "jenks")   
-    leg_values <- unlist(classes$brks)
-    
-    to_map <-  shp %>% 
-      mutate(fillColor = case_when(
-        .data[[y_col]] >= leg_values[1] & .data[[y_col]] < leg_values[2] ~ "#a6bddb",
-        .data[[y_col]] >= leg_values[2] & .data[[y_col]] < leg_values[3] ~ "#74a9cf",
-        .data[[y_col]] >= leg_values[3] & .data[[y_col]] < leg_values[4] ~ "#2b8cbe",
-        .data[[y_col]] >= leg_values[4] ~ "#045a8d",
-        TRUE ~ "#DCDCDC"
-      ))
-    
-    leaflet(to_map) %>%
-      addProviderTiles(providers$CartoDB.Positron) %>% 
-      setView(-2.2, 52.8, 9) %>%
-      addPolygons(
-        layerId = ~pointNumber,  # Set the layerId to the area_code
-        fillColor = ~fillColor,
-        fillOpacity = 0.8,
-        color =  "white",
-        weight = 1,
-        label = ~desc,
-        # label = ~paste0(area_name , " the rate is <b>",  round(.data[[y_col]], 1), "</b>  per 100,000") %>%
-        #   lapply(htmltools::HTML),
-        labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px")),
-        highlightOptions = highlightOptions(
-          weight = 4,
-          color = "yellow",
-          #fillOpacity = 0.7,
-          bringToFront = TRUE
-        )
-      ) %>% 
-      addLegend(
-        colors = c("#a6bddb", "#74a9cf", "#2b8cbe", "#045a8d"),
-        labels = c(
-          paste0(round(leg_values[1], 0), " to ", round(leg_values[2], 1)),
-          paste0(round(leg_values[2], 0), " to ", round(leg_values[3], 0)),
-          paste0(round(leg_values[3], 0), " to ", round(leg_values[4], 0)),
-          paste0(round(leg_values[4], 0), " to ", round(leg_values[5], 0))
-        ),
-        #title = input$y_indicator,
-        position = "bottomleft"
-      ) %>%
-      addEasyButton(easyButton(
-        icon = "fa-globe", title = "Reset Zoom",
-        onClick = JS("function(btn, map){ map.setZoom(9); map.setCenter([-2.2, 52.8]); }")
-      )) %>% 
-      addFullscreenControl()
-  })
-  
-  
-  
-  
-  #Use observe to sync the maps:
-  observe({
-    coords1 <- input$map1_bounds
-    if (!is.null(coords1)) {
-      leafletProxy("map2") %>%
-        fitBounds(coords1$west,
-                  coords1$south,
-                  coords1$east,
-                  coords1$north)
-    }
-  })
-  
-  observe({
-    coords2 <- input$map2_bounds
-    if (!is.null(coords2)) {
-      leafletProxy("map1") %>%
-        fitBounds(coords2$west,
-                  coords2$south,
-                  coords2$east,
-                  coords2$north)
-    }
-  })
-  
-  
-  
-  # Add dynamic titles for the maps
-  observe({
-    map1_title <- input$x_indicator
-    map2_title <- input$y_indicator
-    
-    # Update the title for map1
-    shinyjs::html("map1_title", paste0("<h4>", map1_title, "</h4>"))
-    
-    # Update the title for map2
-    shinyjs::html("map2_title", paste0("<h4>", map2_title, "</h4>"))
-  })
-  
+  # output$map2 <- renderLeaflet({
+  #   data <- filtered_data()
+  #   y_col <- name_to_id(input$y_indicator)
+  #   
+  #   shp <- data %>% 
+  #     arrange(area_name) %>% 
+  #     mutate(pointNumber = row_number()) 
+  #   
+  #   classes <- classInt::classIntervals(data[[y_col]], n = 4, style = "jenks")   
+  #   leg_values <- unlist(classes$brks)
+  #   
+  #   to_map <-  shp %>% 
+  #     mutate(fillColor = case_when(
+  #       .data[[y_col]] >= leg_values[1] & .data[[y_col]] < leg_values[2] ~ "#a6bddb",
+  #       .data[[y_col]] >= leg_values[2] & .data[[y_col]] < leg_values[3] ~ "#74a9cf",
+  #       .data[[y_col]] >= leg_values[3] & .data[[y_col]] < leg_values[4] ~ "#2b8cbe",
+  #       .data[[y_col]] >= leg_values[4] ~ "#045a8d",
+  #       TRUE ~ "#DCDCDC"
+  #     )) %>% 
+  #     mutate(desc = paste0(area_name,"-", round(.data[[y_col]], 1)))
+  #   
+  #   leaflet(to_map) %>%
+  #     addProviderTiles(providers$CartoDB.Positron) %>% 
+  #     setView(-2.2, 52.8, 9) %>%
+  #     addPolygons(
+  #       layerId = ~pointNumber,  # Set the layerId to the area_code
+  #       fillColor = ~fillColor,
+  #       fillOpacity = 0.8,
+  #       color =  "white",
+  #       weight = 1,
+  #       label = ~desc,
+  #       # label = ~paste0(area_name , " the rate is <b>",  round(.data[[y_col]], 1), "</b>  per 100,000") %>%
+  #       #   lapply(htmltools::HTML),
+  #       labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px")),
+  #       highlightOptions = highlightOptions(
+  #         weight = 4,
+  #         color = "yellow",
+  #         #fillOpacity = 0.7,
+  #         bringToFront = TRUE
+  #       )
+  #     ) %>% 
+  #     addLegend(
+  #       colors = c("#a6bddb", "#74a9cf", "#2b8cbe", "#045a8d"),
+  #       labels = c(
+  #         paste0(round(leg_values[1], 0), " to ", round(leg_values[2], 1)),
+  #         paste0(round(leg_values[2], 0), " to ", round(leg_values[3], 0)),
+  #         paste0(round(leg_values[3], 0), " to ", round(leg_values[4], 0)),
+  #         paste0(round(leg_values[4], 0), " to ", round(leg_values[5], 0))
+  #       ),
+  #       #title = input$y_indicator,
+  #       position = "bottomleft"
+  #     ) %>%
+  #     addEasyButton(easyButton(
+  #       icon = "fa-globe", title = "Reset Zoom",
+  #       onClick = JS("function(btn, map){ map.setZoom(9); map.setCenter([-2.2, 52.8]); }")
+  #     )) %>% 
+  #     addFullscreenControl()
+  # })
+  # 
+  # 
+  # 
+  # 
+  # #Use observe to sync the maps:
+  # observe({
+  #   coords1 <- input$map1_bounds
+  #   if (!is.null(coords1)) {
+  #     leafletProxy("map2") %>%
+  #       fitBounds(coords1$west,
+  #                 coords1$south,
+  #                 coords1$east,
+  #                 coords1$north)
+  #   }
+  # })
+  # 
+  # observe({
+  #   coords2 <- input$map2_bounds
+  #   if (!is.null(coords2)) {
+  #     leafletProxy("map1") %>%
+  #       fitBounds(coords2$west,
+  #                 coords2$south,
+  #                 coords2$east,
+  #                 coords2$north)
+  #   }
+  # })
+  # 
+  # 
+  # 
+  # # Add dynamic titles for the maps
+  # observe({
+  #   map1_title <- input$x_indicator
+  #   map2_title <- input$y_indicator
+  #   
+  #   # Update the title for map1
+  #   shinyjs::html("map1_title", paste0("<h4>", map1_title, "</h4>"))
+  #   
+  #   # Update the title for map2
+  #   shinyjs::html("map2_title", paste0("<h4>", map2_title, "</h4>"))
+  # })
+  # 
   
   
   
